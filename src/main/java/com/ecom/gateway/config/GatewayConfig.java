@@ -5,9 +5,7 @@ import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.cors.CorsConfiguration;
 
-import java.util.List;
 
 @Configuration
 @AllArgsConstructor
@@ -23,9 +21,9 @@ public class GatewayConfig {
                 .route("auth-service", r -> r.path("/auth/**")
                         .uri("http://localhost:8080")
                 )
-                .route("financial-transactions-service", r -> r.path("/payments/**")
+                .route("financial-transactions-service", r -> r.path("/payments/**", "/orders/**")
                         .filters(f ->
-                                        f.filter(authenticationFilter)
+                                f.filter(authenticationFilter)
                                         .filter(filter.apply(new CustomCorsFilter.Config()))
                         )
                         .uri("http://localhost:8082")
