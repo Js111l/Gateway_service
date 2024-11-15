@@ -28,8 +28,10 @@ public class GatewayConfig {
                         )
                         .uri("http://localhost:8082")
 
-                ).route("product-service", r -> r.path("/products/**")
-                        .filters(f -> f.filter(authenticationFilter))
+                ).route("product-service", r -> r.path("/products/**", "/enums/**")
+                        .filters(f ->
+                                f.filter(authenticationFilter)
+                        )
                         .uri("http://localhost:8084")
 
                 )
