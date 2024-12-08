@@ -24,6 +24,8 @@ public class AuthenticationFilter implements GatewayFilter {
 
     private final RouterValidator routerValidator;
     private final SecurityServiceClient client;
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+    private static final String SESSION_ID = "sessionId";
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -31,10 +33,10 @@ public class AuthenticationFilter implements GatewayFilter {
         AtomicReference<ServerWebExchange> exchangeRef = new AtomicReference<>(exchange);
 
         try {
-            var token = this.verifyUserSession(exchange.getRequest());
+            final String token = this.verifyUserSession(exchange.getRequest());
             if (routerValidator.isSecured.test(requestRef.get())) {
                 ServerHttpRequest mutatedRequest = requestRef.get().mutate()
-                        .header("Authorization", token) // Attach JWT to internal service
+                        .header(AUTHORIZATION_HEADER, token) // Attach JWT to internal service
                         .build();
 
                 exchangeRef.set(exchangeRef.get().mutate().request(mutatedRequest).build());
@@ -43,28 +45,16 @@ public class AuthenticationFilter implements GatewayFilter {
             this.onError(exchangeRef.get(), HttpStatus.FORBIDDEN);
         }
 
-        return chain.filter(exchangeRef.get());//); // Proceed only after successful verification
+        return chain.filter(exchangeRef.get());
     }
 
 
     private String verifyUserSession(ServerHttpRequest clientRequest) {
-        //wyslanie req do auth service i sprawdzenie czy sesja jest poprawna?
-        //1. idzie request z clienta do jakiegos serwisu.
-        //2. sprawdzamy czy session id w cookies sa poprawne
-        //3. jesli tak to generujemy jwt i wysylamy req z jwt do mikroserwisu
-        //4. mikroserwis waliduje jwt i wysyla odpowiedz, a gateway ja przekazuje klientowi.
-        //5. kiedy klient robi kolejnego requesta, schemat jest podobny. Tokeny jwt nie sa nigdzie zapisywane, sa jednorazowe i bezstanowe, jako dowod ze
-        // request jest napewno autoryzowany.
-
-        var httpCookieList = clientRequest.getCookies().get("sessionId");
+        var httpCookieList = clientRequest.getCookies().get(SESSION_ID);
         String sessionId = null;
-
-        if (httpCookieList != null) {
-            sessionId = httpCookieList.get(0).getValue();
-        } else {
-             //throw new RuntimeException("NO SESSIONID");
+        if (httpCookieList != null && !httpCookieList.isEmpty()) {
+            sessionId = httpCookieList.getFirst().getValue();
         }
-
         return this.client.getJwt(sessionId).token();
     }
 
@@ -72,14 +62,6 @@ public class AuthenticationFilter implements GatewayFilter {
         ServerHttpResponse response = exchange.getResponse();
         response.setStatusCode(httpStatus);
         return response.setComplete();
-    }
-
-    private String getAuthHeader(ServerHttpRequest request) {
-        return request.getHeaders().getOrEmpty("Authorization").get(0);
-    }
-
-    private boolean isAuthMissing(ServerHttpRequest request) {
-        return !request.getHeaders().containsKey("Authorization");
     }
 
 }
