@@ -18,7 +18,7 @@ public class GatewayConfig {
     @Bean
     public RouteLocator routes(RouteLocatorBuilder builder) {
         return builder.routes()
-                .route("auth-service", r -> r.path("/auth/**")
+                .route("auth-service", r -> r.path("/auth/**", "/user/**")
                         .uri("http://localhost:8080")
                 )
                 .route("financial-transactions-service", r -> r.path("/payments/**", "/orders/**")
